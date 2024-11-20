@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "847485941709",
+    "project_id": "secondwear-ad433",
+    "storage_bucket": "secondwear-ad433.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:847485941709:android:cfb0c9e3a5b1753f5ef684",
+        "android_client_info": {
+          "package_name": "com.example.untitled1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5C09DHVJU3c_Y36ZIzy7U4We27Run1VY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:847485941709:android:c7283bcbca3c38395ef684",
+        "android_client_info": {
+          "package_name": "com.example.untitled3"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5C09DHVJU3c_Y36ZIzy7U4We27Run1VY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
