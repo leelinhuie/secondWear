@@ -3,10 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart'; // Add this package to pubspec.yaml
 import '../widgets/drawer.dart';
+import '../services/reward_points_service.dart';
 
 class ManageDonationsPage extends StatelessWidget {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final RewardPointsService _rewardPointsService = RewardPointsService();
 
   @override
   Widget build(BuildContext context) {
@@ -173,30 +175,24 @@ class ManageDonationsPage extends StatelessWidget {
 
   void _approveOrder(BuildContext context, String orderId, String clothesId) async {
     try {
-      // Generate a new orderId if one doesn't exist
       final String finalOrderId = orderId.isEmpty ? 
           FirebaseFirestore.instance.collection('orders').doc().id : 
           orderId;
 
-      // Generate QR code data
       final qrData = 'ORDER:$finalOrderId:${DateTime.now().millisecondsSinceEpoch}';
 
       // Update order status and save QR code
-      await _firestore.collection('orders').doc(finalOrderId).update({
+      await _firestore.collection('orders').doc(finalOrderId).set({
         'status': 'approved',
         'qrCode': qrData,
         'completedAt': FieldValue.serverTimestamp(),
-      });
+        'pointsAwarded': false,
+      }, SetOptions(merge: true));
 
       // Update clothes status
       await _firestore.collection('clothes').doc(clothesId).update({
         'orderStatus': 'approved',
         'completedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Add reward points to donor
-      await _firestore.collection('users').doc(_auth.currentUser?.uid).update({
-        'rewardPoints': FieldValue.increment(10),
       });
 
       if (!context.mounted) return;
@@ -209,13 +205,15 @@ class ManageDonationsPage extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('You earned 10 points for this donation!'),
+              const Text('QR code generated successfully'),
               const SizedBox(height: 20),
               const Text('Recipient will scan this QR code during pickup:'),
               const SizedBox(height: 20),
               QrImageView(
                 data: qrData,
                 size: 200,
+                version: QrVersions.auto,
+                errorCorrectionLevel: QrErrorCorrectLevel.H,
               ),
             ],
           ),
@@ -231,7 +229,10 @@ class ManageDonationsPage extends StatelessWidget {
       if (!context.mounted) return;
       
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }

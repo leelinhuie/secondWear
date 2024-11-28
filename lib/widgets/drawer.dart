@@ -16,12 +16,14 @@ import 'package:untitled3/pages/my_orders_page.dart';
 import 'package:untitled3/pages/donation_qr_codes_page.dart';
 import 'package:untitled3/pages/edit_profile_page.dart';
 import 'package:untitled3/pages/donation_dashboard_page.dart';
+import '../services/reward_points_service.dart';
 
 class DrawerMenu extends StatelessWidget {
   DrawerMenu({super.key});
 
   final FirestoreServices firestoreServices = FirestoreServices();
   final AuthController authController = Get.find<AuthController>();
+  final RewardPointsService _rewardPointsService = RewardPointsService();
   static const String adminEmail = "admin@secondwear.com";
 
   Future<void> signOut() async {
@@ -245,18 +247,13 @@ class DrawerMenu extends StatelessWidget {
             const Divider(thickness: 1),
             // Reward Points
             if (currentUser != null)
-              FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(currentUser.uid)
-                    .get(),
+              StreamBuilder<int>(
+                stream: _rewardPointsService.getUserPoints(),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
-                    final userData = snapshot.data?.data() as Map<String, dynamic>?;
-                    final points = userData?['rewardPoints'] ?? 0;
                     return _buildDrawerItem(
                       icon: Icons.stars,
-                      title: 'Reward Points: $points',
+                      title: 'Reward Points: ${snapshot.data}',
                       onTap: () {},
                       color: Colors.amber,
                     );

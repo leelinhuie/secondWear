@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,6 +8,10 @@ import 'package:path/path.dart' as path;
 import 'package:untitled3/pages/show_clothes.dart';
 import '../widgets/drawer.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/llma_api.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 
 class UploadClothesPage extends StatefulWidget {
@@ -21,6 +26,12 @@ class _UploadClothesPageState extends State<UploadClothesPage> {
   String? _category;
   UploadTask? _uploadTask;
   bool _isUploading = false;
+  final AIService _aiService = AIService();
+  bool _isGeneratingDescription = false;
+  LatLng? _selectedLocation;
+  String? _addressText;
+  final _addressController = TextEditingController();
+  bool _isSearching = false;
 
   final List<String> _categories = [
     'None',
@@ -30,6 +41,35 @@ class _UploadClothesPageState extends State<UploadClothesPage> {
     'Shoes',
     'Accessories'
   ];
+
+  // Add a controller for keywords
+  final _keywordsController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _selectedLocation = LatLng(position.latitude, position.longitude);
+      });
+    } catch (e) {
+      print('Error getting location: $e');
+    }
+  }
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -48,6 +88,13 @@ class _UploadClothesPageState extends State<UploadClothesPage> {
     if (_titleController.text.isEmpty || _category == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all required fields')),
+      );
+      return;
+    }
+
+    if (_selectedLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a pickup location')),
       );
       return;
     }
@@ -83,6 +130,11 @@ class _UploadClothesPageState extends State<UploadClothesPage> {
         'isApproved': false,
         'donorId': FirebaseAuth.instance.currentUser?.uid,
         'donorEmail': FirebaseAuth.instance.currentUser?.email,
+        'pickupLocation': {
+          'latitude': _selectedLocation!.latitude,
+          'longitude': _selectedLocation!.longitude,
+          'address': _addressText,
+        },
       });
 
       // Show success message and navigate
@@ -103,6 +155,227 @@ class _UploadClothesPageState extends State<UploadClothesPage> {
         _isUploading = false;
       });
     }
+  }
+
+  Future<void> _generateDescription() async {
+    if (_keywordsController.text.isEmpty || _category == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter keywords and category')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isGeneratingDescription = true;
+    });
+
+    try {
+      final description = await _aiService.generateDescription(
+        _keywordsController.text,
+        _category!,
+      );
+      
+      setState(() {
+        _descriptionController.text = description;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to generate description: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        _isGeneratingDescription = false;
+      });
+    }
+  }
+
+  Future<void> _searchLocation(Completer<GoogleMapController> mapController) async {
+    setState(() {
+      _isSearching = true;
+    });
+    
+    try {
+      List<Location> locations = await locationFromAddress(_addressController.text);
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        final newPosition = LatLng(location.latitude, location.longitude);
+        
+        setState(() {
+          _selectedLocation = newPosition;
+          _addressText = _addressController.text;
+        });
+
+        final controller = await mapController.future;
+        controller.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: newPosition,
+              zoom: 15,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not find the location')),
+      );
+    } finally {
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _showLocationPicker() {
+    final mapController = Completer<GoogleMapController>();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(
+          children: [
+            AppBar(
+              title: const Text('Select Pickup Location'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _addressController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter address',
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        suffixIcon: _isSearching
+                            ? const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: CircularProgressIndicator(),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.search),
+                                onPressed: () => _searchLocation(mapController),
+                              ),
+                      ),
+                      onSubmitted: (_) => _searchLocation(mapController),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Stack(
+                children: [
+                  GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: _selectedLocation ?? const LatLng(0, 0),
+                      zoom: 15,
+                    ),
+                    onMapCreated: (controller) => mapController.complete(controller),
+                    markers: _selectedLocation != null ? {
+                      Marker(
+                        markerId: const MarkerId('pickup'),
+                        position: _selectedLocation!,
+                        infoWindow: InfoWindow(
+                          title: 'Pickup Location',
+                          snippet: _addressText ?? 'Selected Location',
+                        ),
+                      ),
+                    } : {},
+                    onTap: (LatLng location) async {
+                      setState(() {
+                        _selectedLocation = location;
+                      });
+                      
+                      // Get address from coordinates
+                      try {
+                        List<Placemark> placemarks = await placemarkFromCoordinates(
+                          location.latitude,
+                          location.longitude,
+                        );
+                        if (placemarks.isNotEmpty) {
+                          final place = placemarks.first;
+                          final address = [
+                            place.street,
+                            place.subLocality,
+                            place.locality,
+                            place.postalCode,
+                            place.country,
+                          ].where((e) => e != null && e.isNotEmpty).join(', ');
+                          
+                          setState(() {
+                            _addressText = address;
+                            _addressController.text = address;
+                          });
+                        }
+                      } catch (e) {
+                        print('Error getting address: $e');
+                      }
+                    },
+                  ),
+                  if (_addressText != null)
+                    Positioned(
+                      bottom: 16,
+                      left: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          _addressText!,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.location_on),
+          label: Text(_selectedLocation == null 
+            ? 'Select Pickup Location' 
+            : 'Location Selected'),
+          onPressed: _showLocationPicker,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green.shade700,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -224,23 +497,65 @@ class _UploadClothesPageState extends State<UploadClothesPage> {
                 },
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: "Description",
-                  labelStyle: TextStyle(color: Colors.green.shade700),
-                  alignLabelWithHint: true,
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.green.shade700),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _keywordsController,
+                    decoration: InputDecoration(
+                      labelText: "Keywords (e.g., blue cotton casual)",
+                      labelStyle: TextStyle(color: Colors.green.shade700),
+                      hintText: "Enter a few keywords about the item",
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.green.shade700),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _descriptionController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: "Description",
+                      labelStyle: TextStyle(color: Colors.green.shade700),
+                      alignLabelWithHint: true,
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.green.shade700),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: _isGeneratingDescription ? null : _generateDescription,
+                    icon: _isGeneratingDescription 
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade700),
+                            ),
+                          )
+                        : Icon(Icons.auto_awesome, color: Colors.green.shade700),
+                    label: Text(
+                      _isGeneratingDescription ? "Generating..." : "Generate Description",
+                      style: TextStyle(color: Colors.green.shade700),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 20),
+              _buildLocationSelector(),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _isUploading ? null : _startUpload,

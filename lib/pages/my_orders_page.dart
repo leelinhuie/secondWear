@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/drawer.dart';
 import '../services/firestore.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MyOrdersPage extends StatelessWidget {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -140,9 +141,18 @@ class MyOrdersPage extends StatelessWidget {
                           final cloth = clothes[index];
                           return ListTile(
                             title: Text(cloth?['title'] ?? 'Untitled Item'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.qr_code_scanner),
-                              onPressed: () => _showScanner(context, orderDoc.id),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.directions),
+                                  onPressed: () => _openGoogleMaps(cloth?['pickupLocation']),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.qr_code_scanner),
+                                  onPressed: () => _showScanner(context, orderDoc.id),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -256,7 +266,20 @@ class MyOrdersPage extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    if (date == null) return 'Date not set';
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _openGoogleMaps(Map<String, dynamic> location) async {
+    if (location == null) return;
+    
+    final lat = location['latitude'];
+    final lng = location['longitude'];
+    final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
+    
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      print('Could not launch $url');
+    }
   }
 } 
