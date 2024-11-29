@@ -77,4 +77,33 @@ class SaveClothesService {
         .orderBy('savedAt', descending: true)
         .snapshots();
   }
+
+  Future<void> removeMultipleSavedClothes(List<String> clothesIds) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw 'User must be logged in to remove saved clothes';
+      }
+
+      // Get all saved items that match the clothesIds
+      final QuerySnapshot savedItems = await _firestore
+          .collection('saved_clothes')
+          .where('userId', isEqualTo: user.uid)
+          .where('clothesId', whereIn: clothesIds)
+          .get();
+
+      // Create a batch to perform multiple deletes
+      final batch = _firestore.batch();
+      
+      // Add each document deletion to the batch
+      for (var doc in savedItems.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Commit the batch
+      await batch.commit();
+    } catch (e) {
+      throw 'Failed to remove saved clothes: $e';
+    }
+  }
 }

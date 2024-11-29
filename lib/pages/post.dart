@@ -4,6 +4,7 @@ import 'package:untitled3/services/firestore.dart';
 import 'package:untitled3/widgets/like_button.dart';
 import 'package:untitled3/widgets/drawer.dart';
 import 'package:untitled3/widgets/comments.dart';
+import 'package:untitled3/widgets/report_button.dart';
 
 class Post extends StatefulWidget {
   const Post({super.key});
@@ -91,6 +92,7 @@ class _PostState extends State<Post> {
                       final post = snapshot.data!.docs[index];
                       final postID = post.id;
                       final data = post.data() as Map<String, dynamic>;
+
                       final likes = data['likes'] ?? 0;
                       final List<dynamic> likedBy = data['likedBy'] ?? [];
                       final message = data['message'] ?? 'No message';
@@ -102,7 +104,7 @@ class _PostState extends State<Post> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Title (email)
+                              // Title (email) with delete/report button
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(8),
@@ -113,31 +115,18 @@ class _PostState extends State<Post> {
                                     topRight: Radius.circular(4),
                                   ),
                                 ),
-                                child: Text(
-                                  data['email'] ?? 'Anonymous',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                              // Content (message)
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(message),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  LikeButton(
-                                    postID: postID,
-                                    likes: likes,
-                                    likedBy: likedBy,
-                                  ),
-                                  Row(
-                                    children: [
-                                      // Delete button
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      data['email'] ?? 'Anonymous',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    // Delete/Report button
+                                    if (data['email'] == currentUser.email)
                                       IconButton(
                                         icon: Icon(Icons.delete, color: Colors.green.shade700),
                                         onPressed: () {
@@ -170,18 +159,39 @@ class _PostState extends State<Post> {
                                             },
                                           );
                                         },
+                                      )
+                                    else
+                                      ReportButton(
+                                        contentId: postID,
+                                        contentType: 'post',
+                                        reportedUserEmail: data['email'] ?? 'Anonymous',
                                       ),
-                                      // Comment button changed to TextButton
-                                      TextButton(
-                                        onPressed: () {
-                                          showCommentsDialog(context, postID);
-                                        },
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Colors.green.shade700,
-                                        ),
-                                        child: const Text('Reply'),
-                                      ),
-                                    ],
+                                  ],
+                                ),
+                              ),
+                              // Content (message)
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(message),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  LikeButton(
+                                    postID: postID,
+                                    likes: likes,
+                                    likedBy: likedBy,
+                                  ),
+                                  // Comment button
+                                  TextButton(
+                                    onPressed: () {
+                                      showCommentsDialog(context, postID);
+                                    },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.green.shade700,
+                                    ),
+                                    child: const Text('Reply'),
                                   ),
                                 ],
                               ),
@@ -200,6 +210,7 @@ class _PostState extends State<Post> {
     );
   }
 }
+
 // Helper function to safely get email from comment data
 String getEmailFromComment(Map<String, dynamic> commentData) {
   return commentData['email'] ?? 'Unknown';

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/drawer.dart';
 import 'checkout_page.dart';
+import '../services/save_clothes_service.dart';
 
 class SavedClothesPage extends StatefulWidget {
   @override
@@ -12,6 +13,7 @@ class SavedClothesPage extends StatefulWidget {
 class _SavedClothesPageState extends State<SavedClothesPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final SaveClothesService _saveClothesService = SaveClothesService();
   final List<String> _selectedClothesIds = [];
 
   @override
@@ -149,20 +151,41 @@ class _SavedClothesPageState extends State<SavedClothesPage> {
   }
 
   void _navigateToCheckout() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CheckoutPage(
-          selectedClothesIds: List.from(_selectedClothesIds),
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CheckoutPage(
+            selectedClothesIds: List.from(_selectedClothesIds),
+          ),
         ),
-      ),
-    );
+      );
 
-    // If checkout was successful, clear the selection
-    if (result == true) {
-      setState(() {
-        _selectedClothesIds.clear();
-      });
+      // If checkout was successful, remove the items from saved clothes
+      if (result == true) {
+        await _saveClothesService.removeMultipleSavedClothes(_selectedClothesIds);
+        setState(() {
+          _selectedClothesIds.clear();
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Items have been checked out and removed from saved items'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 } 

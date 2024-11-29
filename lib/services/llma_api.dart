@@ -35,4 +35,40 @@ class AIService {
       throw Exception('Error generating description: $e');
     }
   }
+
+  Future<bool> checkInappropriateContent(String content) async {
+    try {
+      print('DEBUG: Starting AI content check');
+      groq.startChat();
+      
+      const instructions = '''
+        You are a content moderator. Analyze text for inappropriate content.
+        Rules:
+        1. Check for hate speech, explicit content, harassment, or offensive language
+        2. Return "true" if content is inappropriate, "false" if it's safe
+        3. Be strict but fair in moderation
+        4. Consider context and intent
+      ''';
+      
+      print('DEBUG: Setting AI instructions');
+      groq.setCustomInstructionsWith(instructions);
+
+      final text = '''
+        Content to analyze: $content
+        Is this content inappropriate? Reply with only "true" or "false".
+      ''';
+
+      print('DEBUG: Sending content to AI for analysis');
+      GroqResponse response = await groq.sendMessage(text);
+      final result = response.choices.first.message.content.toLowerCase().trim() == 'true';
+      print('DEBUG: AI response raw: ${response.choices.first.message.content}');
+      print('DEBUG: AI analysis result: $result');
+      return result;
+      
+    } catch (e) {
+      print('DEBUG: Error in AI check: $e');
+      // If AI check fails, err on the side of caution
+      return true;
+    }
+  }
 }

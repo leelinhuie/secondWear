@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/search_service.dart';
 import '../services/save_clothes_service.dart';
 import '../widgets/drawer.dart';
+import '../widgets/filter.dart';
 
 class DisplayClothesPage extends StatefulWidget {
   @override
@@ -15,10 +16,11 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
   final SaveClothesService _saveClothesService = SaveClothesService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String _searchQuery = '';
+  String? _selectedCategory;
 
   // Add this method to filter results locally
   List<DocumentSnapshot> _filterResults(List<DocumentSnapshot> docs) {
-    if (_searchQuery.isEmpty) return docs;
+    if (_searchQuery.isEmpty && _selectedCategory == null) return docs;
 
     return docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
@@ -26,9 +28,12 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
       final description = (data['description'] ?? '').toString().toLowerCase();
       final category = (data['category'] ?? '').toString().toLowerCase();
 
-      return title.contains(_searchQuery.toLowerCase()) ||
-          description.contains(_searchQuery.toLowerCase()) ||
-          category.contains(_searchQuery.toLowerCase());
+      final matchesSearch = title.contains(_searchQuery.toLowerCase()) ||
+          description.contains(_searchQuery.toLowerCase());
+
+      final matchesCategory = _selectedCategory == null || _selectedCategory == 'All' || category == _selectedCategory!.toLowerCase();
+
+      return matchesSearch && matchesCategory;
     }).toList();
   }
 
@@ -103,7 +108,19 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                       IconButton(
                         icon: Icon(Icons.filter_list, color: Colors.green.shade700),
                         onPressed: () {
-                          // Add filter functionality here
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (context) {
+                              return FilterWidget(
+                                selectedCategory: _selectedCategory,
+                                onCategoryChanged: (category) {
+                                  setState(() {
+                                    _selectedCategory = category;
+                                  });
+                                },
+                              );
+                            },
+                          );
                         },
                       ),
                     ],
