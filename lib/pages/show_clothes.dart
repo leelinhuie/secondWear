@@ -5,6 +5,7 @@ import '../services/search_service.dart';
 import '../services/save_clothes_service.dart';
 import '../widgets/drawer.dart';
 import '../widgets/filter.dart';
+import 'package:untitled3/pages/clothes_details_page.dart'; // Import the details page
 
 class DisplayClothesPage extends StatefulWidget {
   @override
@@ -18,7 +19,7 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
   String _searchQuery = '';
   String? _selectedCategory;
 
-  // Add this method to filter results locally
+  // Method to filter results
   List<DocumentSnapshot> _filterResults(List<DocumentSnapshot> docs) {
     if (_searchQuery.isEmpty && _selectedCategory == null) return docs;
 
@@ -31,7 +32,9 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
       final matchesSearch = title.contains(_searchQuery.toLowerCase()) ||
           description.contains(_searchQuery.toLowerCase());
 
-      final matchesCategory = _selectedCategory == null || _selectedCategory == 'All' || category == _selectedCategory!.toLowerCase();
+      final matchesCategory = _selectedCategory == null ||
+          _selectedCategory == 'All' ||
+          category == _selectedCategory!.toLowerCase();
 
       return matchesSearch && matchesCategory;
     }).toList();
@@ -96,7 +99,8 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                             hintText: 'Search Clothes',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 15),
                           ),
                           onChanged: (value) {
                             setState(() {
@@ -106,7 +110,8 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.filter_list, color: Colors.green.shade700),
+                        icon: Icon(Icons.filter_list,
+                            color: Colors.green.shade700),
                         onPressed: () {
                           showModalBottomSheet(
                             context: context,
@@ -172,130 +177,152 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
               itemBuilder: (context, index) {
                 final doc = filteredDocs[index];
                 final data = doc.data() as Map<String, dynamic>;
+                final isCurrentUserItem =
+                    data['donorId'] == _auth.currentUser?.uid;
 
-                return Card(
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                              ),
-                              child: Image.network(
-                                data['imageUrl'],
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.green.shade700,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Container(
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ClothesDetailsPage(
+                          data: data,
+                          currentUserId: _auth.currentUser?.uid ?? '',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
+                                  color: Colors.grey[200],
                                 ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    data['donorId'] == _auth.currentUser?.uid 
-                                        ? Icons.person_outline  // Show different icon for own items
-                                        : Icons.add,
-                                    color: data['donorId'] == _auth.currentUser?.uid 
-                                        ? Colors.grey.shade400
-                                        : Colors.grey.shade700,
+                                child: Image.network(
+                                  data['imageUrl'],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Colors.green.shade700,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
-                                  onPressed: data['donorId'] == _auth.currentUser?.uid
-                                      ? () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'This is your own donation (Donor: ${data['donorEmail'] ?? 'Unknown'})',
-                                                style: const TextStyle(color: Colors.white),
-                                              ),
-                                              backgroundColor: Colors.orange,
-                                            ),
-                                          );
-                                        }
-                                      : () async {
-                                          try {
-                                            String clothesId = doc.id;
-                                            await _saveClothesService.saveClothes(
-                                              clothesId,
-                                              data,
-                                            );
-
-                                            if (!mounted) return;
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Item saved successfully!'),
-                                                backgroundColor: Colors.green,
-                                              ),
-                                            );
-                                          } catch (e) {
-                                            if (!mounted) return;
-                                            ScaffoldMessenger.of(context).showSnackBar(
+                                  child: IconButton(
+                                    icon: Icon(
+                                      isCurrentUserItem
+                                          ? Icons.person_outline
+                                          : Icons.add,
+                                      color: isCurrentUserItem
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade700,
+                                    ),
+                                    onPressed: isCurrentUserItem
+                                        ? () {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
                                               SnackBar(
-                                                content: Text(e.toString()),
-                                                backgroundColor: Colors.red,
+                                                content: Text(
+                                                  'This is your own donation (Donor: ${data['donorEmail'] ?? 'Unknown'})',
+                                                  style: const TextStyle(
+                                                      color: Colors.white),
+                                                ),
+                                                backgroundColor: Colors.orange,
                                               ),
                                             );
                                           }
-                                        },
+                                        : () async {
+                                            try {
+                                              String clothesId = doc.id;
+                                              await _saveClothesService
+                                                  .saveClothes(
+                                                clothesId,
+                                                data,
+                                              );
+                                              if (!mounted) return;
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                      'Item saved successfully!'),
+                                                  backgroundColor: Colors.green,
+                                                ),
+                                              );
+                                            } catch (e) {
+                                              if (!mounted) return;
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(e.toString()),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          },
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              data['title'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                height: 1.2,
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                data['title'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  height: 1.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              data['description'] ?? 'Description',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                                height: 1.2,
+                              const SizedBox(height: 4),
+                              Text(
+                                data['description'] ?? 'Description',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                  height: 1.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

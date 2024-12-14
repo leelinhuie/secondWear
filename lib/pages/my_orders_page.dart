@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/drawer.dart';
-import '../services/firestore.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,14 +17,14 @@ class MyOrdersPage extends StatelessWidget {
         drawer: DrawerMenu(),
         appBar: AppBar(
           title: const Text('My Orders'),
-          titleTextStyle: TextStyle(
+          titleTextStyle: const TextStyle(
             color: Colors.white,
             fontSize: 20,
           ),
           backgroundColor: Colors.green.shade700,
           iconTheme: const IconThemeData(color: Colors.white),
-          bottom: TabBar(
-            tabs: const [
+          bottom: const TabBar(
+            tabs: [
               Tab(text: 'Pending'),
               Tab(text: 'Approved'),
               Tab(text: 'Completed'),
@@ -141,19 +140,21 @@ class MyOrdersPage extends StatelessWidget {
                           final cloth = clothes[index];
                           return ListTile(
                             title: Text(cloth?['title'] ?? 'Untitled Item'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.directions),
-                                  onPressed: () => _openGoogleMaps(cloth?['pickupLocation']),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.qr_code_scanner),
-                                  onPressed: () => _showScanner(context, orderDoc.id),
-                                ),
-                              ],
-                            ),
+                            trailing: (status == 'approved') // Buttons only visible for 'approved' status
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.directions),
+                                        onPressed: () => _openGoogleMaps(cloth?['pickupLocation']),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.qr_code_scanner),
+                                        onPressed: () => _showScanner(context, orderDoc.id),
+                                      ),
+                                    ],
+                                  )
+                                : null, // No buttons for 'pending' or 'completed'
                           );
                         },
                       ),
@@ -282,4 +283,4 @@ class MyOrdersPage extends StatelessWidget {
       print('Could not launch $url');
     }
   }
-} 
+}

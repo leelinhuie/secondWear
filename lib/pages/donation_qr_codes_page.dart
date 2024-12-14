@@ -43,20 +43,48 @@ class DonationQRCodesPage extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('No approved donations yet'),
-                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'No approved donations yet. Upload clothes to generate QR codes for donations.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.green[800],
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        backgroundColor: Colors.green[700],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 2,
                       ),
                       onPressed: () {
-                        Navigator.pushReplacement(
+                        Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => UploadClothesPage()),
+                          MaterialPageRoute(
+                            builder: (context) => UploadClothesPage(),
+                          ),
                         );
                       },
-                      child: const Text('Upload Clothes'),
+                      child: const Text(
+                        'Upload Clothes',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -73,24 +101,12 @@ class DonationQRCodesPage extends StatelessWidget {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
                   child: ExpansionTile(
-                    leading: clothesData['imageUrl'] != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              clothesData['imageUrl'],
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : null,
+                    leading: _buildImage(clothesData['imageUrl']),
                     title: Text(clothesData['title'] ?? 'Untitled Item'),
                     subtitle: Text(
                       'Status: ${clothesData['orderStatus']?.toUpperCase() ?? 'N/A'}',
                       style: TextStyle(
-                        color: clothesData['orderStatus'] == 'completed' 
-                            ? Colors.grey 
-                            : Colors.green,
+                        color: _getStatusColor(clothesData['orderStatus']),
                       ),
                     ),
                     children: [
@@ -107,10 +123,16 @@ class DonationQRCodesPage extends StatelessWidget {
                             );
                           }
 
-                          final orderData = orderSnapshot.data?.data() 
+                          final orderData = orderSnapshot.data?.data()
                               as Map<String, dynamic>?;
-                          final qrCode = orderData?['qrCode'];
+                          if (orderData == null) {
+                            return const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Text('Order data unavailable'),
+                            );
+                          }
 
+                          final qrCode = orderData['qrCode'];
                           if (qrCode == null) {
                             return const Padding(
                               padding: EdgeInsets.all(16),
@@ -150,4 +172,42 @@ class DonationQRCodesPage extends StatelessWidget {
       ),
     );
   }
-} 
+
+  Widget _buildImage(String? imageUrl) {
+    if (imageUrl == null) {
+      return const Icon(
+        Icons.image_not_supported,
+        size: 50,
+        color: Colors.grey,
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        imageUrl,
+        width: 50,
+        height: 50,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(
+            Icons.broken_image,
+            size: 50,
+            color: Colors.red,
+          );
+        },
+      ),
+    );
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'completed':
+        return Colors.grey;
+      case 'approved':
+        return Colors.green;
+      default:
+        return Colors.orange; // Default color for unknown statuses
+    }
+  }
+}

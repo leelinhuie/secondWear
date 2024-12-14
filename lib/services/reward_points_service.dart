@@ -21,11 +21,25 @@ class RewardPointsService {
         // If document doesn't exist, create it with initial points
         await userRef.set({
           'rewardPoints': points,
+          'rewardPointsHistory': [
+            {
+              'points': points,
+              'timestamp': FieldValue.serverTimestamp(),
+              'reason': 'Initial points'
+            }
+          ]
         }, SetOptions(merge: true));
       } else {
-        // If document exists, update the points
+        // If document exists, update the points and add to history
         await userRef.update({
           'rewardPoints': FieldValue.increment(points),
+          'rewardPointsHistory': FieldValue.arrayUnion([
+            {
+              'points': points,
+              'timestamp': FieldValue.serverTimestamp(),
+              'reason': 'QR Code Scan Reward'
+            }
+          ])
         });
       }
     } catch (e) {
@@ -45,48 +59,64 @@ class RewardPointsService {
         .map((snapshot) => snapshot.data()?['rewardPoints'] ?? 0);
   }
 
-  // Add this method to handle QR code scanning
+  // Retrieve reward points history
+  Stream<List<Map<String, dynamic>>> getRewardPointsHistory() {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return Stream.value([]);
+
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .map((snapshot) {
+          final data = snapshot.data();
+          return data?['rewardPointsHistory'] is List 
+              ? List<Map<String, dynamic>>.from(data?['rewardPointsHistory'] ?? [])
+              : [];
+        });
+  }
+
+  // Handle QR code scanning
   Future<bool> handleQRCodeScan(String qrData) async {
     try {
-      print('Raw QR Data received: [$qrData]'); // Debug the exact raw data
-      
-      // Clean the data - remove any whitespace and special characters
-      String cleanedData = qrData.trim();
-      print('Cleaned QR Data: [$cleanedData]');
-
-      // Try to extract orderId directly if the format is different
-      String? orderId;
-      
-      if (cleanedData.contains('ORDER:')) {
-        // Try original format
-        final parts = cleanedData.split(':');
-        print('Split parts: $parts');
-        orderId = parts.length >= 2 ? parts[1] : null;
-      } else {
-        // Assume the entire string might be the orderId
-        orderId = cleanedData;
+      // Validate current user
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('No authenticated user');
       }
 
-      print('Extracted OrderId: $orderId');
-
-      if (orderId == null || orderId.isEmpty) {
-        throw Exception('Could not extract valid order ID from QR code');
+      // Clean and validate QR data
+      final cleanedData = qrData.trim();
+      if (cleanedData.isEmpty) {
+        throw Exception('Invalid QR code data');
       }
 
-      // Get the order document
+      // Extract order ID (assuming the QR code contains the order ID)
+      final orderId = cleanedData;
+
+      // Fetch the order document
       final orderDoc = await _firestore.collection('orders').doc(orderId).get();
       
       if (!orderDoc.exists) {
-        throw Exception('Order not found: $orderId');
+        throw Exception('Order not found');
       }
 
       final orderData = orderDoc.data() as Map<String, dynamic>;
-      print('Found order data: $orderData');
       
-      // Check if points were already awarded
+      // Check if the order is valid for points
       if (orderData['pointsAwarded'] == true) {
         print('Points already awarded for this order');
         return false;
+      }
+
+      // Verify the order status or other conditions if needed
+      if (orderData['orderStatus'] != 'completed') {
+        throw Exception('Order is not in a valid state for points');
+      }
+
+      // Verify the receiver is not the donor
+      if (orderData['receiverId'] == currentUser.uid) {
+        throw Exception('Receiver cannot scan their own donation QR');
       }
 
       // Add points to user
@@ -96,9 +126,9 @@ class RewardPointsService {
       await _firestore.collection('orders').doc(orderId).update({
         'pointsAwarded': true,
         'pointsAwardedAt': FieldValue.serverTimestamp(),
+        'pointsAwardedTo': currentUser.uid,
       });
       
-      print('Successfully processed QR code and awarded points');
       return true;
 
     } catch (e) {

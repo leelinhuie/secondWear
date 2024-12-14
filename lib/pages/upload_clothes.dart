@@ -71,16 +71,42 @@ class _UploadClothesPageState extends State<UploadClothesPage> {
     }
   }
 
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+Future<void> _pickImage() async {
+  final ImagePicker picker = ImagePicker();
+  final XFile? image = await showDialog<XFile>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Choose Image Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () async {
+                Navigator.pop(context, await picker.pickImage(source: ImageSource.camera));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Album'),
+              onTap: () async {
+                Navigator.pop(context, await picker.pickImage(source: ImageSource.gallery));
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
 
-    if (image != null) {
-      setState(() {
-        _imagePath = image.path;
-      });
-    }
+  if (image != null) {
+    setState(() {
+      _imagePath = image.path;
+    });
   }
+}
 
   Future<void> _startUpload() async {
     if (_imagePath == null) return;

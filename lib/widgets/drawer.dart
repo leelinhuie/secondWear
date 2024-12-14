@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:untitled3/pages/chatpage.dart';
 import 'package:untitled3/pages/upload_clothes.dart';
 import 'package:untitled3/pages/show_clothes.dart';
 import 'package:untitled3/services/firestore.dart';
@@ -171,6 +170,7 @@ class DrawerMenu extends StatelessWidget {
                 );
               },
             ),
+            
             _buildDrawerItem(
               icon: Icons.volunteer_activism,
               title: 'Manage Donations',
@@ -209,16 +209,6 @@ class DrawerMenu extends StatelessWidget {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => Post()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.chat,
-              title: 'Chat',
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ChatPage()),
                 );
               },
             ),

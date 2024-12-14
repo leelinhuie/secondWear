@@ -4,7 +4,8 @@ import 'package:get/get.dart';
 import 'package:untitled3/authentication/auth_controller.dart';
 import 'package:untitled3/authentication/login.dart';
 import 'package:untitled3/pages/admin_panel.dart';
-import 'package:untitled3/pages/post.dart';
+import 'package:untitled3/pages/show_clothes.dart';
+
 
 class Wrapper extends StatelessWidget {
   Wrapper({super.key});
@@ -23,7 +24,7 @@ class Wrapper extends StatelessWidget {
             return const AdminPanel();
           }
           // Regular user
-          return const Post();
+          return DisplayClothesPage();
         }
         // If user is not logged in
         return const Login();
