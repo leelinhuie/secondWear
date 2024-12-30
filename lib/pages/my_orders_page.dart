@@ -18,8 +18,9 @@ class MyOrdersPage extends StatelessWidget {
         appBar: AppBar(
           title: const Text('My Orders'),
           titleTextStyle: const TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 20,
+            fontFamily: 'Cardo',
           ),
           backgroundColor: Colors.green.shade700,
           iconTheme: const IconThemeData(color: Colors.white),

@@ -40,11 +40,214 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
     }).toList();
   }
 
+  Widget _buildClothingCard(DocumentSnapshot doc, Map<String, dynamic> data) {
+    final isCurrentUserItem = data['donorId'] == _auth.currentUser?.uid;
+
+    // Safely handle image URLs
+    List<String> imageUrls = [];
+    try {
+      if (data['imageUrls'] != null) {
+        imageUrls = List<String>.from(data['imageUrls']);
+      } else if (data['imageUrl'] != null) {
+        imageUrls = [data['imageUrl'].toString()];
+      }
+    } catch (e) {
+      print('Error parsing image URLs: $e');
+    }
+
+    // Fallback image if no valid images found
+    if (imageUrls.isEmpty) {
+      imageUrls = ['https://via.placeholder.com/400?text=No+Image'];
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ClothesDetailsPage(
+              data: data,
+              currentUserId: _auth.currentUser?.uid ?? '',
+            ),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    itemCount: imageUrls.length,
+                    itemBuilder: (context, imageIndex) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                        ),
+                        child: Image.network(
+                          imageUrls[imageIndex],
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: Icon(
+                                  Icons.error_outline,
+                                  color: const Color(0xFFC8DFC3),
+                                  size: 40,
+                                ),
+                              ),
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes !=
+                                        null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Color(0xFFC8DFC3),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  if (imageUrls.length > 1)
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '1/${imageUrls.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          isCurrentUserItem ? Icons.person_outline : Icons.add,
+                          color: isCurrentUserItem
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade700,
+                        ),
+                        onPressed: isCurrentUserItem
+                            ? () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'This is your own donation (Donor: ${data['donorEmail'] ?? 'Unknown'})',
+                                      style:
+                                          const TextStyle(color: Colors.white),
+                                    ),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                              }
+                            : () => _handleSaveClothes(doc, data),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    data['title'],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      height: 1.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    data['description'] ?? 'Description',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleSaveClothes(
+      DocumentSnapshot doc, Map<String, dynamic> data) async {
+    try {
+      String clothesId = doc.id;
+      await _saveClothesService.saveClothes(clothesId, data);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item saved successfully!'),
+          backgroundColor: Color(0xFFC8DFC3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFC8DFC3),
       appBar: AppBar(
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: const Color(0xFFC8DFC3),
         centerTitle: true,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -52,26 +255,28 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
           preferredSize: const Size.fromHeight(160),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            color: Colors.green.shade700,
+            color: const Color(0xFFC8DFC3),
             child: Column(
               children: [
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   "SecondWear",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
+                    fontFamily: 'Cardo',
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   "Sustainable Clothing Exchange Platform and Donation System",
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Colors.grey[600],
                     fontSize: 14,
                     height: 1.2,
+                    fontFamily: 'Cardo',
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -82,7 +287,7 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                     borderRadius: BorderRadius.circular(25),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: const Color(0xFFC8DFC3).withOpacity(0.2),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -91,7 +296,7 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Icon(Icons.search, color: Colors.green.shade700),
+                      Icon(Icons.search, color: const Color(0xFFC8DFC3)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
@@ -110,8 +315,10 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.filter_list,
-                            color: Colors.green.shade700),
+                        icon: Icon(
+                          Icons.filter_list,
+                          color: const Color(0xFFC8DFC3),
+                        ),
                         onPressed: () {
                           showModalBottomSheet(
                             context: context,
@@ -147,22 +354,32 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
+              return Center(
+                  child: Text('Error: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.white)));
             }
 
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFC8DFC3)),
+                ),
+              );
             }
 
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text('No clothes available'));
+              return const Center(
+                  child: Text('No clothes available',
+                      style: TextStyle(color: Colors.white)));
             }
 
             // Filter the results
             final filteredDocs = _filterResults(snapshot.data!.docs);
 
             if (filteredDocs.isEmpty) {
-              return const Center(child: Text('No matching clothes found'));
+              return const Center(
+                  child: Text('No matching clothes found',
+                      style: TextStyle(color: Colors.white)));
             }
 
             return GridView.builder(
@@ -177,154 +394,7 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
               itemBuilder: (context, index) {
                 final doc = filteredDocs[index];
                 final data = doc.data() as Map<String, dynamic>;
-                final isCurrentUserItem =
-                    data['donorId'] == _auth.currentUser?.uid;
-
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ClothesDetailsPage(
-                          data: data,
-                          currentUserId: _auth.currentUser?.uid ?? '',
-                        ),
-                      ),
-                    );
-                  },
-                  child: Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                ),
-                                child: Image.network(
-                                  data['imageUrl'],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                      child: CircularProgressIndicator(
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          Colors.green.shade700,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(
-                                      isCurrentUserItem
-                                          ? Icons.person_outline
-                                          : Icons.add,
-                                      color: isCurrentUserItem
-                                          ? Colors.grey.shade400
-                                          : Colors.grey.shade700,
-                                    ),
-                                    onPressed: isCurrentUserItem
-                                        ? () {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'This is your own donation (Donor: ${data['donorEmail'] ?? 'Unknown'})',
-                                                  style: const TextStyle(
-                                                      color: Colors.white),
-                                                ),
-                                                backgroundColor: Colors.orange,
-                                              ),
-                                            );
-                                          }
-                                        : () async {
-                                            try {
-                                              String clothesId = doc.id;
-                                              await _saveClothesService
-                                                  .saveClothes(
-                                                clothesId,
-                                                data,
-                                              );
-                                              if (!mounted) return;
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                      'Item saved successfully!'),
-                                                  backgroundColor: Colors.green,
-                                                ),
-                                              );
-                                            } catch (e) {
-                                              if (!mounted) return;
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                SnackBar(
-                                                  content: Text(e.toString()),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                data['title'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  height: 1.2,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                data['description'] ?? 'Description',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                  height: 1.2,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return _buildClothingCard(doc, data);
               },
             );
           },

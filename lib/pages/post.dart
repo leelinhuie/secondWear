@@ -5,6 +5,7 @@ import 'package:untitled3/widgets/like_button.dart';
 import 'package:untitled3/widgets/drawer.dart';
 import 'package:untitled3/widgets/comments.dart';
 import 'package:untitled3/widgets/report_button.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Post extends StatefulWidget {
   const Post({super.key});
@@ -35,15 +36,16 @@ class _PostState extends State<Post> {
     return Scaffold(
       drawer: DrawerMenu(),
       appBar: AppBar(
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: const Color(0xFFC8DFC3),
         centerTitle: false,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
           "Community",
           style: TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 20,
+            fontFamily: 'Cardo',
           ),
         ),
       ),
@@ -183,15 +185,26 @@ class _PostState extends State<Post> {
                                     likes: likes,
                                     likedBy: likedBy,
                                   ),
-                                  // Comment button
-                                  TextButton(
-                                    onPressed: () {
-                                      showCommentsDialog(context, postID);
+                                  // Comment button with count
+                                  StreamBuilder<QuerySnapshot>(
+                                    stream: FirebaseFirestore.instance
+                                        .collection('posts')
+                                        .doc(postID)
+                                        .collection('comments')
+                                        .snapshots(),
+                                    builder: (context, snapshot) {
+                                      int commentCount = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                                      return TextButton.icon(
+                                        onPressed: () {
+                                          showCommentsDialog(context, postID);
+                                        },
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.green.shade700,
+                                        ),
+                                        icon: const Icon(Icons.comment_outlined),
+                                        label: Text('$commentCount'),
+                                      );
                                     },
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.green.shade700,
-                                    ),
-                                    child: const Text('Reply'),
                                   ),
                                 ],
                               ),

@@ -20,10 +20,10 @@ class ClothesDetailsPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           data['title'] ?? 'Clothes Details',
-          style: const TextStyle(color: Colors.white), // Title in white
+          style: const TextStyle(color: Colors.black, fontFamily: 'Cardo'), // Title in white
         ),
-        backgroundColor: Colors.green.shade700,
-        iconTheme: const IconThemeData(color: Colors.white), // Back arrow in white
+        backgroundColor:const Color(0xFFC8DFC3),
+        iconTheme: const IconThemeData(color: Colors.black), // Back arrow in white
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -138,7 +138,7 @@ class ClothesDetailsPage extends StatelessWidget {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isOwnDonation ? Colors.grey : Colors.green.shade700,
+                    backgroundColor: isOwnDonation ? Colors.grey : Color(0xFFBDC29A),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -147,7 +147,7 @@ class ClothesDetailsPage extends StatelessWidget {
                   child: Center(
                     child: Text(
                       isOwnDonation ? 'Not Allowed' : 'Add to Save',
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontFamily: 'Cardo'),
                     ),
                   ),
                 ),

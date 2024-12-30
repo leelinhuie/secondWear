@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
+import 'package:lottie/lottie.dart';
 
 class CheckoutPage extends StatefulWidget {
   final List<String> selectedClothesIds;
@@ -23,10 +24,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
       appBar: AppBar(
         title: const Text('Checkout'),
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: Colors.black,
           fontSize: 20,
+          fontFamily: 'Cardo',
         ),
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: const Color(0xFFC8DFC3),
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SafeArea(
         child: Padding(
@@ -40,6 +43,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   fontSize: 18, 
                   fontWeight: FontWeight.bold,
                   color: Colors.green.shade700,
+                  fontFamily: 'Cardo',
                 ),
               ),
               const SizedBox(height: 16),
@@ -68,24 +72,44 @@ class _CheckoutPageState extends State<CheckoutPage> {
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                child: Stack(
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFBDC29A),
+                       
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: _scheduleDelivery,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Confirm Order',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cardo',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: Lottie.asset(
+                              'lib/assets/checkout.json',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  onPressed: _scheduleDelivery,
-                  child: const Text(
-                    'Confirm Order',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ],

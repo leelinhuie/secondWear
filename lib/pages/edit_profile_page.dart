@@ -99,9 +99,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         title: const Text(
           'Edit Profile',
           style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+            color: Colors.black,
+            fontSize: 20,
+            fontFamily: 'Cardo',
           ),
         ),
         backgroundColor: Colors.green.shade700,

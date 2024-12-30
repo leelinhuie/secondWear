@@ -16,11 +16,12 @@ class DonationQRCodesPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Donation QR Codes'),
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: Colors.black,
           fontSize: 20,
+          fontFamily: 'Cardo',
         ),
-        backgroundColor: Colors.green.shade700,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: const Color(0xFFC8DFC3),
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SafeArea(
         child: StreamBuilder<QuerySnapshot>(

@@ -54,6 +54,7 @@ dependencies:
   geolocator: ^10.1.0
   geocoding: ^2.1.1
   url_launcher: ^6.2.5
+  lottie: ^2.7.0
 
 
 dev_dependencies:
@@ -77,6 +78,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - lib/assets/loading.json
+    - lib/assets/checkout.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -94,11 +98,19 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
+  fonts:
+    - family: SpecialElite
+      fonts:
+        - asset: fonts/SpecialElite-Regular.ttf
+    - family: Notable
+      fonts:
+        - asset: fonts/Notable-Regular.ttf
+    - family: Cardo
+      fonts:
+        - asset: fonts/Cardo-Bold.ttf
+    - family: OldStandardTT
+      fonts:
+        - asset: fonts/OldStandardTT-Regular.ttf
   #         style: italic
   #   - family: Trajan Pro
   #     fonts:

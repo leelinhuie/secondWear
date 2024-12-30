@@ -52,7 +52,7 @@ class DrawerMenu extends StatelessWidget {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(
-                color: Colors.green.shade600,
+                color: const Color(0xFFBDC29A),
               ),
               child: Center(
                 child: const Text(
@@ -61,6 +61,7 @@ class DrawerMenu extends StatelessWidget {
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
+                    fontFamily: 'SpecialElite',
                   ),
                 ),
               ),
@@ -152,7 +153,7 @@ class DrawerMenu extends StatelessWidget {
             ),
             _buildDrawerItem(
               icon: Icons.upload,
-              title: 'Upload Clothes',
+              title: 'Donate Clothes',
               onTap: () {
                 Navigator.pushReplacement(
                   context,
@@ -276,12 +277,12 @@ class DrawerMenu extends StatelessWidget {
         style: TextStyle(
           color: color ?? Colors.grey[800],
           fontSize: 16,
+          fontFamily: 'Cardo',
         ),
       ),
       onTap: onTap,
       dense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-      hoverColor: Colors.green.withOpacity(0.1),
     );
   }
 }

@@ -16,6 +16,7 @@ class AIService {
         2. Keep descriptions under 30 words
         3. Focus on style, condition, and potential uses
         4. Be positive and engaging
+        5. Do not use quotation marks in the response
       ''';
       
       groq.setCustomInstructionsWith(instructions);
@@ -23,11 +24,11 @@ class AIService {
       final text = '''
         Category: $category
         Keywords: $keywords
-        Generate a brief, natural-sounding description for this clothing item.
+        Generate a brief, natural-sounding description for this clothing item. Do not use quotation marks.
       ''';
 
       GroqResponse response = await groq.sendMessage(text);
-      return response.choices.first.message.content;
+      return response.choices.first.message.content.replaceAll('"', '').replaceAll("'", '');
       
     } on GroqException catch (error) {
       throw Exception('Groq API error: ${error.message}');

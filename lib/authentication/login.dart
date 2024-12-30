@@ -118,6 +118,11 @@ class _LoginState extends State<Login> {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Colors.green),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.green, width: 2),
+        ),
+        labelStyle: TextStyle(color: Colors.green[700]),
       ),
     );
   }

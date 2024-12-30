@@ -22,8 +22,9 @@ class ManageDonationsPage extends StatelessWidget {
         title: const Text(
           "Manage Donations",
           style: TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 20,
+            fontFamily: 'Cardo',
           ),
         ),
       ),

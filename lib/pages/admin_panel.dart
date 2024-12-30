@@ -9,7 +9,8 @@ class AdminPanel extends StatefulWidget {
   _AdminPanelState createState() => _AdminPanelState();
 }
 
-class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateMixin {
+class _AdminPanelState extends State<AdminPanel>
+    with SingleTickerProviderStateMixin {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   late TabController _tabController;
 
@@ -73,8 +74,9 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
       appBar: AppBar(
         title: const Text('Admin Panel'),
         titleTextStyle: const TextStyle(
-          color: Colors.white,
+          color: Colors.black,
           fontSize: 20,
+          fontFamily: 'Cardo',
         ),
         backgroundColor: Colors.green.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -124,6 +126,21 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
           itemBuilder: (context, index) {
             final doc = snapshot.data!.docs[index];
             final data = doc.data() as Map<String, dynamic>;
+            
+            List<String> imageUrls = [];
+            try {
+              if (data['imageUrls'] != null) {
+                imageUrls = List<String>.from(data['imageUrls']);
+              } else if (data['imageUrl'] != null) {
+                imageUrls = [data['imageUrl'].toString()];
+              }
+            } catch (e) {
+              print('Error parsing image URLs: $e');
+            }
+
+            if (imageUrls.isEmpty) {
+              imageUrls = ['https://via.placeholder.com/400?text=No+Image'];
+            }
 
             return Card(
               elevation: 3,
@@ -134,27 +151,62 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(15),
-                    ),
-                    child: Image.network(
-                      data['imageUrl'],
-                      width: double.infinity,
-                      height: 200,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.green.shade700,
-                            ),
+                  SizedBox(
+                    height: 200,
+                    child: PageView.builder(
+                      itemCount: imageUrls.length,
+                      itemBuilder: (context, imageIndex) {
+                        return ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(15),
+                          ),
+                          child: Image.network(
+                            imageUrls[imageIndex],
+                            width: double.infinity,
+                            height: 200,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[200],
+                                child: Center(
+                                  child: Icon(
+                                    Icons.error_outline,
+                                    color: Colors.grey[400],
+                                    size: 40,
+                                  ),
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded / 
+                                        loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.green.shade700,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
                     ),
                   ),
+                  if (imageUrls.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        'Swipe to see all ${imageUrls.length} images',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -243,6 +295,8 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
           itemBuilder: (context, index) {
             final doc = snapshot.data!.docs[index];
             final data = doc.data() as Map<String, dynamic>;
+            final List<String> imageUrls =
+                List<String>.from(data['imageUrls'] ?? [data['imageUrl']]);
 
             return Card(
               elevation: 3,
@@ -253,22 +307,30 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(15),
-                    ),
-                    child: Image.network(
-                      data['imageUrl'],
-                      width: double.infinity,
-                      height: 200,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.green.shade700,
-                            ),
+                  SizedBox(
+                    height: 200,
+                    child: PageView.builder(
+                      itemCount: imageUrls.length,
+                      itemBuilder: (context, imageIndex) {
+                        return ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(15),
+                          ),
+                          child: Image.network(
+                            imageUrls[imageIndex],
+                            width: double.infinity,
+                            height: 200,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.green.shade700,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
@@ -335,4 +397,4 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
       },
     );
   }
-} 
+}

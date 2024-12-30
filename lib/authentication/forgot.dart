@@ -80,10 +80,16 @@ class _ForgotState extends State<Forgot> {
                     filled: true,
                     fillColor: Colors.white,
                     hintText: 'Enter Email',
+                    labelText: 'Email',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.green), // Green border
+                      borderSide: const BorderSide(color: Colors.green),
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.green, width: 2),
+                    ),
+                    labelStyle: TextStyle(color: Colors.green[700]),
                   ),
                 ),
               ),

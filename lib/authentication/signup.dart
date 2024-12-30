@@ -88,6 +88,11 @@ class _SignupState extends State<Signup> {
                           borderRadius: BorderRadius.circular(10),
                           borderSide: const BorderSide(color: Colors.green),
                         ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Colors.green, width: 2),
+                        ),
+                        labelStyle: TextStyle(color: Colors.green[700]),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -103,6 +108,11 @@ class _SignupState extends State<Signup> {
                           borderRadius: BorderRadius.circular(10),
                           borderSide: const BorderSide(color: Colors.green),
                         ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Colors.green, width: 2),
+                        ),
+                        labelStyle: TextStyle(color: Colors.green[700]),
                       ),
                     ),
                     const SizedBox(height: 20),
