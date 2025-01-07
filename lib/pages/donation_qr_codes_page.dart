@@ -176,9 +176,9 @@ class DonationQRCodesPage extends StatelessWidget {
                               padding: const EdgeInsets.all(16),
                               child: Column(
                                 children: [
-                                  if (clothesData['qrCode'] != null) ...[
+                                  if (orderData['qrCode'] != null) ...[
                                     QrImageView(
-                                      data: clothesData['qrCode'],
+                                      data: orderData['qrCode'],
                                       size: 200,
                                       backgroundColor: Colors.white,
                                     ),
