@@ -38,7 +38,8 @@ class _UploadClothesPageState extends State<UploadClothesPage> {
     'Shirts',
     'Pants',
     'Jackets',
-    'Shoes',
+    'Skirt',
+    'Dress',
     'Accessories'
   ];
 
@@ -400,17 +401,57 @@ Future<void> _pickImage() async {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 16),
+        // Location selection button
         ElevatedButton.icon(
           icon: const Icon(Icons.location_on),
           label: Text(_selectedLocation == null 
             ? 'Select Pickup Location' 
-            : 'Location Selected'),
+            : 'Change Pickup Location'),
           onPressed: _showLocationPicker,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green.shade700,
             foregroundColor: Colors.white,
           ),
         ),
+        // Show selected location details
+        if (_selectedLocation != null && _addressText != null)
+          Card(
+            margin: const EdgeInsets.only(top: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.place, color: Colors.green.shade700),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Selected Pickup Location:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _addressText!,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Coordinates: ${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -420,11 +461,12 @@ Future<void> _pickImage() async {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          height: 200,
+          height: 220,
           child: _imagePaths.isEmpty
               ? GestureDetector(
                   onTap: _pickImage,
                   child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(15),
@@ -458,6 +500,7 @@ Future<void> _pickImage() async {
                   ),
                 )
               : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   scrollDirection: Axis.horizontal,
                   itemCount: _imagePaths.length + 1, // +1 for add button
                   itemBuilder: (context, index) {
@@ -519,7 +562,7 @@ Future<void> _pickImage() async {
         ),
         if (_imagePaths.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 8.0),
+            padding: const EdgeInsets.only(top: 12.0),
             child: Text(
               '${_imagePaths.length} photos selected',
               style: TextStyle(
@@ -538,10 +581,10 @@ Future<void> _pickImage() async {
     return Scaffold(
       drawer: DrawerMenu(),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFC8DFC3),
+        backgroundColor: const Color.fromARGB(255, 144, 189, 134),
         centerTitle: false,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
           "Donate Clothes",
           style: TextStyle(
@@ -553,12 +596,12 @@ Future<void> _pickImage() async {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildImageGallery(), // Replace the old image picker with new gallery
-              const SizedBox(height: 24),
+              _buildImageGallery(),
+              const SizedBox(height: 32),
               Text(
                 "Item Details",
                 style: TextStyle(
@@ -567,7 +610,7 @@ Future<void> _pickImage() async {
                   color: Colors.green.shade700,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               TextField(
                 controller: _titleController,
                 decoration: InputDecoration(
@@ -583,7 +626,7 @@ Future<void> _pickImage() async {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               DropdownButtonFormField<String>(
                 value: _category,
                 hint: const Text("Select Category"),
@@ -609,7 +652,7 @@ Future<void> _pickImage() async {
                   });
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -629,7 +672,27 @@ Future<void> _pickImage() async {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: TextButton.icon(
+                      onPressed: _isGeneratingDescription ? null : _generateDescription,
+                      icon: _isGeneratingDescription 
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade700),
+                              ),
+                            )
+                          : Icon(Icons.auto_awesome, color: Colors.green.shade700),
+                      label: Text(
+                        _isGeneratingDescription ? "Generating..." : "Generate Description",
+                        style: TextStyle(color: Colors.green.shade700, fontFamily: 'OldStandardTT', fontSize: 20),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   Scrollbar(
                     child: TextField(
                       controller: _descriptionController,
@@ -651,58 +714,46 @@ Future<void> _pickImage() async {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: _isGeneratingDescription ? null : _generateDescription,
-                    icon: _isGeneratingDescription 
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade700),
-                            ),
-                          )
-                        : Icon(Icons.auto_awesome, color: Colors.green.shade700),
-                    label: Text(
-                      _isGeneratingDescription ? "Generating..." : "Generate Description",
-                      style: TextStyle(color: Colors.green.shade700, fontFamily: 'OldStandardTT', fontSize: 20),
-                    ),
-                  ),
+                  
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
               _buildLocationSelector(),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isUploading ? null : _startUpload,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: _isUploading 
-                    ? const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(color: Colors.white),
-                          ),
-                          SizedBox(width: 10),
-                          Text("Uploading..."),
-                        ],
-                      )
-                    : const Text(
-                      "Upload Item",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+              const SizedBox(height: 32),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: ElevatedButton(
+                  onPressed: _isUploading ? null : _startUpload,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                  ),
+                  child: _isUploading 
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white),
+                            ),
+                            SizedBox(width: 10),
+                            Text("Uploading..."),
+                          ],
+                        )
+                      : const Text(
+                        "Upload Item",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cardo',
+                        ),
+                      ),
+                ),
               ),
             ],
           ),

@@ -16,6 +16,61 @@ import 'package:untitled3/pages/donation_qr_codes_page.dart';
 import 'package:untitled3/pages/edit_profile_page.dart';
 import 'package:untitled3/pages/donation_dashboard_page.dart';
 import '../services/reward_points_service.dart';
+import 'package:untitled3/pages/admin_reports_page.dart';
+
+class RewardPointsHistoryDialog extends StatelessWidget {
+  final RewardPointsService _rewardPointsService = RewardPointsService();
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Reward Points History',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            SizedBox(height: 16),
+            Flexible(
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: _rewardPointsService.getRewardPointsHistory(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  final history = snapshot.data!;
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: history.length,
+                    itemBuilder: (context, index) {
+                      final item = history[index];
+                      return ListTile(
+                        title: Text('${item['points']} points'),
+                        subtitle: Text(item['reason'] ?? 'Unknown reason'),
+                        trailing: Text(
+                          item['timestamp']?.toDate()?.toString() ?? 'No date',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class DrawerMenu extends StatelessWidget {
   DrawerMenu({super.key});
@@ -43,7 +98,8 @@ class DrawerMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    
+    final isAdmin = currentUser?.email == adminEmail;
+
     return Drawer(
       child: Container(
         color: Colors.white,
@@ -52,22 +108,22 @@ class DrawerMenu extends StatelessWidget {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(
-                color: const Color(0xFFBDC29A),
+                color: const Color.fromARGB(255, 144, 189, 134),
               ),
               child: Center(
                 child: const Text(
                   'Menu',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'SpecialElite',
+                    fontFamily: 'Cardo',
                   ),
                 ),
               ),
             ),
 
-            // User Profile Section (Clickable)
+            // User Profile Section (visible to all)
             if (currentUser != null)
               FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
@@ -75,7 +131,8 @@ class DrawerMenu extends StatelessWidget {
                     .doc(currentUser.uid)
                     .get(),
                 builder: (context, snapshot) {
-                  final userData = snapshot.data?.data() as Map<String, dynamic>?;
+                  final userData =
+                      snapshot.data?.data() as Map<String, dynamic>?;
                   final name = userData?['name'] ?? 'User Profile';
                   final email = currentUser.email ?? '';
 
@@ -83,7 +140,8 @@ class DrawerMenu extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => EditProfilePage()),
+                        MaterialPageRoute(
+                            builder: (context) => EditProfilePage()),
                       );
                     },
                     child: Padding(
@@ -142,89 +200,8 @@ class DrawerMenu extends StatelessWidget {
                 },
               ),
 
-            // Menu Items
-            _buildDrawerItem(
-              icon: Icons.grid_view,
-              title: 'Available Clothes',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => DisplayClothesPage()),
-              ),
-            ),
-            _buildDrawerItem(
-              icon: Icons.upload,
-              title: 'Donate Clothes',
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => UploadClothesPage()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.save_rounded,
-              title: 'Saved Clothes',
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => SavedClothesPage()),
-                );
-              },
-            ),
-            
-            _buildDrawerItem(
-              icon: Icons.volunteer_activism,
-              title: 'Manage Donations',
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => ManageDonationsPage()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.qr_code,
-              title: 'Donation QR Codes',
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => DonationQRCodesPage()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.dashboard,
-              title: 'Donation Dashboard',
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => DonationDashboardPage()),
-                );
-              },
-            ),
-        
-            _buildDrawerItem(
-              icon: Icons.people,
-              title: 'Community',
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => Post()),
-                );
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.shopping_bag,
-              title: 'My Orders',
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => MyOrdersPage()),
-                );
-              },
-            ),
-            if (FirebaseAuth.instance.currentUser?.email == adminEmail || 
-                Get.arguments == true)
+            // Show only Admin Panel for admin
+            if (isAdmin)
               _buildDrawerItem(
                 icon: Icons.admin_panel_settings,
                 title: 'Admin Panel',
@@ -235,23 +212,127 @@ class DrawerMenu extends StatelessWidget {
                   );
                 },
               ),
-            const Divider(thickness: 1),
-            // Reward Points
-            if (currentUser != null)
-              StreamBuilder<int>(
-                stream: _rewardPointsService.getUserPoints(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return _buildDrawerItem(
-                      icon: Icons.stars,
-                      title: 'Reward Points: ${snapshot.data}',
-                      onTap: () {},
-                      color: Colors.amber,
-                    );
-                  }
-                  return const SizedBox();
+              if (isAdmin)
+              _buildDrawerItem(
+                icon: Icons.admin_panel_settings,
+                title: 'Manage Reports',
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AdminReportsPage()),
+                  );
                 },
               ),
+
+            // Show other menu items only for non-admin users
+            if (!isAdmin) ...[
+              _buildDrawerItem(
+                icon: Icons.grid_view,
+                title: 'Available Clothes',
+                onTap: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => DisplayClothesPage()),
+                ),
+              ),
+              _buildDrawerItem(
+                icon: Icons.upload,
+                title: 'Donate Clothes',
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => UploadClothesPage()),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                icon: Icons.save_rounded,
+                title: 'Saved Clothes',
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => SavedClothesPage()),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                icon: Icons.volunteer_activism,
+                title: 'Manage Donations',
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => ManageDonationsPage()),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                icon: Icons.qr_code,
+                title: 'Donation QR Codes',
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => DonationQRCodesPage()),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                icon: Icons.shopping_bag,
+                title: 'My Orders',
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => MyOrdersPage()),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+                icon: Icons.dashboard,
+                title: 'Donation Dashboard',
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => DonationDashboardPage()),
+                  );
+                },
+              ),
+              _buildDrawerItem(
+              icon: Icons.people,
+              title: 'Community',
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => Post()),
+                );
+              },
+            ),
+            ],
+
+
+            // Reward Points and Logout (visible to all)
+            const Divider(thickness: 1),
+           
+            if (!isAdmin)
+            StreamBuilder<int>(
+              stream: _rewardPointsService.getUserPoints(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return _buildDrawerItem(
+                    icon: Icons.stars,
+                    title: 'Reward Points: ${snapshot.data}',
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => RewardPointsHistoryDialog(),
+                      );
+                    },
+                    color: Colors.amber,
+                  );
+                }
+                return const SizedBox();
+              },
+            ),
             _buildDrawerItem(
               icon: Icons.logout,
               title: 'Logout',
@@ -271,13 +352,14 @@ class DrawerMenu extends StatelessWidget {
     Color? color,
   }) {
     return ListTile(
-      leading: Icon(icon, color: color ?? Colors.grey[800]),
+      leading: Icon(icon, color: color ?? Colors.black),
       title: Text(
         title,
         style: TextStyle(
           color: color ?? Colors.grey[800],
-          fontSize: 16,
-          fontFamily: 'Cardo',
+          fontSize: 15,
+          fontFamily: 'Quicksand',
+          fontWeight: FontWeight.bold,
         ),
       ),
       onTap: onTap,

@@ -6,8 +6,15 @@ import 'package:lottie/lottie.dart';
 
 class CheckoutPage extends StatefulWidget {
   final List<String> selectedClothesIds;
+  final bool isRescheduling;
+  final Map<String, dynamic>? originalOrderData;
 
-  const CheckoutPage({Key? key, required this.selectedClothesIds}) : super(key: key);
+  const CheckoutPage({
+    Key? key, 
+    required this.selectedClothesIds,
+    this.isRescheduling = false,
+    this.originalOrderData,
+  }) : super(key: key);
 
   @override
   _CheckoutPageState createState() => _CheckoutPageState();
@@ -28,7 +35,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           fontSize: 20,
           fontFamily: 'Cardo',
         ),
-        backgroundColor: const Color(0xFFC8DFC3),
+        backgroundColor: const Color.fromARGB(255, 144, 189, 134),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SafeArea(
@@ -76,7 +83,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFBDC29A),
+                        backgroundColor: Color.fromARGB(255, 144, 189, 134),
                        
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 2,
@@ -121,27 +128,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _scheduleDelivery() async {
     try {
-      final uuid = Uuid();
-      final String orderId = uuid.v4();
-      
-      // Create a batch for atomic operations
       final batch = _firestore.batch();
+      String orderId;
       
-      // First, verify all clothes exist and are available
-      List<DocumentSnapshot> clothesDocs = [];
-      for (String clothesId in widget.selectedClothesIds) {
-        final clothesDoc = await _firestore.collection('clothes').doc(clothesId).get();
-        if (!clothesDoc.exists) {
-          throw 'One or more selected items no longer exist';
-        }
-        if (clothesDoc.data()?['orderStatus'] != null) {
-          throw 'One or more items are no longer available';
-        }
-        clothesDocs.add(clothesDoc);
+      if (widget.isRescheduling) {
+        // Use existing clothes IDs for rescheduling
+        orderId = const Uuid().v4();
+      } else {
+        // Original order flow
+        orderId = const Uuid().v4();
       }
-      
+
       // Add order document to batch
       final orderRef = _firestore.collection('orders').doc(orderId);
+      String qrCode = 'ORDER:${DateTime.now().millisecondsSinceEpoch}:${_auth.currentUser?.uid}:$orderId';
       batch.set(orderRef, {
         'orderId': orderId,
         'userId': _auth.currentUser?.uid,
@@ -149,7 +149,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         'deliveryDate': Timestamp.fromDate(selectedDate),
         'orderedAt': FieldValue.serverTimestamp(),
         'status': 'pending',
-        'qrCode': null,
+        'qrCode': qrCode,
+        'isRescheduled': widget.isRescheduling, // Add flag for rescheduled orders
       });
 
       // Update all clothes documents in batch
@@ -158,21 +159,26 @@ class _CheckoutPageState extends State<CheckoutPage> {
         batch.update(clothesRef, {
           'orderStatus': 'pending',
           'orderId': orderId,
+          'pickupDate': Timestamp.fromDate(selectedDate),
         });
       }
 
-      // Commit all changes atomically
       await batch.commit();
 
+      if (!context.mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pickup scheduled successfully! Waiting for donor approval.'),
+        SnackBar(
+          content: Text(widget.isRescheduling 
+            ? 'Pickup rescheduled successfully! Waiting for donor approval.'
+            : 'Pickup scheduled successfully! Waiting for donor approval.'),
           backgroundColor: Colors.green,
         ),
       );
 
       Navigator.pop(context, true);
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),

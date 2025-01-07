@@ -121,6 +121,21 @@ class RewardPointsService {
 
       // Add points to user
       await addPoints(10);
+
+      // Add points to donor
+      final donorId = orderData['donorId'];
+      if (donorId != null) {
+        await _firestore.collection('users').doc(donorId).update({
+          'rewardPoints': FieldValue.increment(10),
+          'rewardPointsHistory': FieldValue.arrayUnion([
+            {
+              'points': 10,
+              'timestamp': FieldValue.serverTimestamp(),
+              'reason': 'Donor QR Code Scan Reward'
+            }
+          ])
+        });
+      }
       
       // Update order to mark points as awarded
       await _firestore.collection('orders').doc(orderId).update({

@@ -2,7 +2,7 @@ import 'package:groq/groq.dart';
 
 class AIService {
   final Groq groq = Groq(
-    apiKey: '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',
+    apiKey: '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',
   );
 
   Future<String> generateDescription(String keywords, String category) async {

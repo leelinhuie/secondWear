@@ -9,6 +9,35 @@ class DonationQRCodesPage extends StatelessWidget {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  void _showImageGallery(BuildContext context, List<String> imageUrls) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+              backgroundColor: const Color.fromARGB(255, 144, 189, 134),
+              titleTextStyle: const TextStyle(
+                color: Colors.black,
+                fontSize: 20,
+                fontFamily: 'Cardo',
+              ),
+              iconTheme: const IconThemeData(color: Colors.black),
+            ),
+            SizedBox(
+              height: 300,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,7 +49,7 @@ class DonationQRCodesPage extends StatelessWidget {
           fontSize: 20,
           fontFamily: 'Cardo',
         ),
-        backgroundColor: const Color(0xFFC8DFC3),
+        backgroundColor: Color.fromARGB(255, 144, 189, 134),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SafeArea(
@@ -101,102 +130,81 @@ class DonationQRCodesPage extends StatelessWidget {
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
-                  child: ExpansionTile(
-                    leading: _buildImage(clothesData['imageUrl']),
-                    title: Text(clothesData['title'] ?? 'Untitled Item'),
-                    subtitle: Text(
-                      'Status: ${clothesData['orderStatus']?.toUpperCase() ?? 'N/A'}',
-                      style: TextStyle(
-                        color: _getStatusColor(clothesData['orderStatus']),
-                      ),
-                    ),
-                    children: [
-                      FutureBuilder<DocumentSnapshot>(
-                        future: _firestore
-                            .collection('orders')
-                            .doc(clothesData['orderId'])
-                            .get(),
-                        builder: (context, orderSnapshot) {
-                          if (!orderSnapshot.hasData) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
+                  child: FutureBuilder<DocumentSnapshot>(
+                    future: _firestore
+                        .collection('orders')
+                        .doc(clothesData['orderId'])
+                        .get(),
+                    builder: (context, orderSnapshot) {
+                      if (!orderSnapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                          final orderData = orderSnapshot.data?.data()
-                              as Map<String, dynamic>?;
-                          if (orderData == null) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text('Order data unavailable'),
-                            );
-                          }
+                      final orderDoc = orderSnapshot.data!;
+                      final orderData = orderDoc.data() as Map<String, dynamic>?;
 
-                          final qrCode = orderData['qrCode'];
-                          if (qrCode == null) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text('QR Code not available'),
-                            );
-                          }
-
-                          return Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                QrImageView(
-                                  data: qrCode,
-                                  size: 200,
-                                  backgroundColor: Colors.white,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Show this QR code to the recipient when they pick up the item',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
+                      return ExpansionTile(
+                        
+                        title: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Order #${orderDoc.id.substring(0, 8)}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          );
-                        },
-                      ),
-                    ],
+                            Text(
+                              'Order ID: ${clothesData['orderId'] ?? 'N/A'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: Text(
+                          'Status: ${clothesData['orderStatus']?.toUpperCase() ?? 'N/A'}',
+                          style: TextStyle(
+                            color: _getStatusColor(clothesData['orderStatus']),
+                          ),
+                        ),
+                        children: [
+                          if (orderData != null) ...[
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  if (clothesData['qrCode'] != null) ...[
+                                    QrImageView(
+                                      data: clothesData['qrCode'],
+                                      size: 200,
+                                      backgroundColor: Colors.white,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Show this QR code to the recipient when they pick up the item',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ] else
+                                    const Text('QR Code not available'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 );
               },
             );
           },
         ),
-      ),
-    );
-  }
-
-  Widget _buildImage(String? imageUrl) {
-    if (imageUrl == null) {
-      return const Icon(
-        Icons.image_not_supported,
-        size: 50,
-        color: Colors.grey,
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.network(
-        imageUrl,
-        width: 50,
-        height: 50,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return const Icon(
-            Icons.broken_image,
-            size: 50,
-            color: Colors.red,
-          );
-        },
       ),
     );
   }

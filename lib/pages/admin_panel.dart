@@ -67,6 +67,36 @@ class _AdminPanelState extends State<AdminPanel>
     }
   }
 
+  Future<void> _confirmDeleteItem(String docId) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Delete'),
+          content: const Text('Are you sure you want to delete this item?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+              
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      _deleteItem(docId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,8 +108,8 @@ class _AdminPanelState extends State<AdminPanel>
           fontSize: 20,
           fontFamily: 'Cardo',
         ),
-        backgroundColor: Colors.green.shade700,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Color.fromARGB(255, 144, 189, 134),
+        iconTheme: const IconThemeData(color: Colors.black),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -186,7 +216,7 @@ class _AdminPanelState extends State<AdminPanel>
                                         loadingProgress.expectedTotalBytes!
                                       : null,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.green.shade700,
+                                    Color.fromARGB(255, 144, 189, 134),
                                   ),
                                 ),
                               );
@@ -239,22 +269,23 @@ class _AdminPanelState extends State<AdminPanel>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
+                            ElevatedButton(
+                              onPressed: () => _approveItem(doc.id),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color.fromARGB(255, 144, 189, 134),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Approve'),
+                            ),
+                            const SizedBox(width: 8),
                             TextButton(
-                              onPressed: () => _deleteItem(doc.id),
+                              onPressed: () => _confirmDeleteItem(doc.id),
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.red,
                               ),
                               child: const Text('Delete'),
                             ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () => _approveItem(doc.id),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green.shade700,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: const Text('Approve'),
-                            ),
+                            
                           ],
                         ),
                       ],
@@ -326,7 +357,7 @@ class _AdminPanelState extends State<AdminPanel>
                               return Center(
                                 child: CircularProgressIndicator(
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.green.shade700,
+                                    Color.fromARGB(255, 144, 189, 134),
                                   ),
                                 ),
                               );
@@ -369,7 +400,7 @@ class _AdminPanelState extends State<AdminPanel>
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             TextButton(
-                              onPressed: () => _deleteItem(doc.id),
+                              onPressed: () => _confirmDeleteItem(doc.id),
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.red,
                               ),
@@ -379,7 +410,7 @@ class _AdminPanelState extends State<AdminPanel>
                             ElevatedButton(
                               onPressed: () => _approveItem(doc.id),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green.shade700,
+                                backgroundColor: Color.fromARGB(255, 144, 189, 134),
                                 foregroundColor: Colors.white,
                               ),
                               child: const Text('Approve'),

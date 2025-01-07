@@ -4,6 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/drawer.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
+import 'package:lottie/lottie.dart';
+import 'package:untitled3/pages/checkout_page.dart';
 
 class MyOrdersPage extends StatelessWidget {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -12,7 +15,7 @@ class MyOrdersPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         drawer: DrawerMenu(),
         appBar: AppBar(
@@ -22,13 +25,14 @@ class MyOrdersPage extends StatelessWidget {
             fontSize: 20,
             fontFamily: 'Cardo',
           ),
-          backgroundColor: Colors.green.shade700,
-          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: const Color.fromARGB(255, 144, 189, 134),
+          iconTheme: const IconThemeData(color: Colors.black),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Pending'),
               Tab(text: 'Approved'),
               Tab(text: 'Completed'),
+              Tab(text: 'Rejected'),
             ],
             indicatorColor: Colors.white,
             labelColor: Colors.white,
@@ -39,6 +43,7 @@ class MyOrdersPage extends StatelessWidget {
             _buildOrdersList('pending'),
             _buildOrdersList('approved'),
             _buildOrdersList('completed'),
+            _buildOrdersList('rejected'),
           ],
         ),
       ),
@@ -64,7 +69,7 @@ class MyOrdersPage extends StatelessWidget {
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Center(
-            child: Text('No ${status} orders'),
+            child: Text('No $status orders'),
           );
         }
 
@@ -82,7 +87,7 @@ class MyOrdersPage extends StatelessWidget {
                     .toList(),
               ),
               builder: (context, clothesSnapshot) {
-                if (!clothesSnapshot.hasData) {
+                if (clothesSnapshot.connectionState == ConnectionState.waiting) {
                   return const Card(
                     child: Padding(
                       padding: EdgeInsets.all(16),
@@ -91,12 +96,15 @@ class MyOrdersPage extends StatelessWidget {
                   );
                 }
 
+                if (!clothesSnapshot.hasData) {
+                  return const Center(
+                    child: Text('Error loading clothes details'),
+                  );
+                }
+
                 final clothes = clothesSnapshot.data!
-                    .map((doc) {
-                      if (!doc.exists) return null;
-                      return doc.data() as Map<String, dynamic>?;
-                    })
-                    .where((data) => data != null)
+                    .where((doc) => doc.exists)
+                    .map((doc) => doc.data() as Map<String, dynamic>)
                     .toList();
 
                 return Card(
@@ -133,21 +141,22 @@ class MyOrdersPage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const Divider(),
                       ListView.builder(
                         shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: clothes.length,
                         itemBuilder: (context, index) {
                           final cloth = clothes[index];
                           return ListTile(
-                            title: Text(cloth?['title'] ?? 'Untitled Item'),
-                            trailing: (status == 'approved') // Buttons only visible for 'approved' status
+                            title: Text(cloth['title'] ?? 'Untitled Item'),
+                            trailing: (status == 'approved')
                                 ? Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
                                         icon: const Icon(Icons.directions),
-                                        onPressed: () => _openGoogleMaps(cloth?['pickupLocation']),
+                                        onPressed: () => _openGoogleMaps(cloth['pickupLocation']),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.qr_code_scanner),
@@ -155,10 +164,31 @@ class MyOrdersPage extends StatelessWidget {
                                       ),
                                     ],
                                   )
-                                : null, // No buttons for 'pending' or 'completed'
+                                : null,
                           );
                         },
                       ),
+                      if (status == 'rejected')
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: ElevatedButton(
+                            onPressed: () => _rescheduleOrder(context, orderDoc.id, orderData),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color.fromARGB(255, 144, 189, 134),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 45),
+                            ),
+                            child: const Text(
+                              'Reschedule Pickup',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Cardo',
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 );
@@ -174,7 +204,7 @@ class MyOrdersPage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Container(
+      builder: (context) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.7,
         child: Column(
           children: [
@@ -189,9 +219,9 @@ class MyOrdersPage extends StatelessWidget {
               child: MobileScanner(
                 controller: MobileScannerController(),
                 onDetect: (capture) {
-                  final List<Barcode> barcodes = capture.barcodes;
-                  for (final barcode in barcodes) {
-                    _verifyQRCode(context, orderId, barcode.rawValue ?? '');
+                  final barcode = capture.barcodes.first;
+                  if (barcode.rawValue != null) {
+                    _verifyQRCode(context, orderId, barcode.rawValue!);
                   }
                 },
               ),
@@ -202,57 +232,105 @@ class MyOrdersPage extends StatelessWidget {
     );
   }
 
-  void _verifyQRCode(BuildContext context, String orderId, String scannedData) async {
+void _verifyQRCode(BuildContext context, String orderId, String scannedData) async {
     try {
-      // Get the order document
-      final orderDoc = await _firestore.collection('orders').doc(orderId).get();
-      final orderData = orderDoc.data();
+        print('Starting QR verification...');
+        print('Order ID: $orderId');
+        print('Scanned Data: $scannedData');
 
-      if (orderData?['qrCode'] == scannedData) {
-        // Update order status to completed
-        await _firestore.collection('orders').doc(orderId).update({
-          'status': 'completed',
-          'pickedUpAt': FieldValue.serverTimestamp(), // Add pickup timestamp
-        });
-
-        // Update all clothes status to completed
-        final clothesIds = orderData?['clothesIds'] as List?;
-        if (clothesIds != null) {
-          for (var clothesId in clothesIds) {
-            await _firestore.collection('clothes').doc(clothesId.toString()).update({
-              'orderStatus': 'completed',
-              'pickedUpAt': FieldValue.serverTimestamp(), // Add pickup timestamp
-            });
-          }
+        final orderDoc = await _firestore.collection('orders').doc(orderId).get();
+        if (!orderDoc.exists) {
+            print('Order document not found!');
+            return;
         }
 
-        if (!context.mounted) return;
-        Navigator.pop(context); // Close scanner
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pickup verified successfully!'),
-            backgroundColor: Colors.green,
-          ),
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final clothesIds = List<String>.from(orderData['clothesIds'] ?? []);
+        print('Clothes IDs in order: $clothesIds');
+
+        bool qrCodeMatched = false;
+        final clothesDocs = await Future.wait(
+            clothesIds.map((id) => _firestore.collection('clothes').doc(id).get())
         );
-      } else {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid QR code'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+
+        for (var clothesDoc in clothesDocs) {
+            if (clothesDoc.exists) {
+                final clothesData = clothesDoc.data() as Map<String, dynamic>;
+                print('Comparing:');
+                print('Stored  QR: ${clothesData['qrCode']}');
+                print('Scanned QR: $scannedData');
+                if (clothesData['qrCode'] == scannedData) {
+                    print('Match found!');
+                    qrCodeMatched = true;
+                    
+                    // Update both the clothes and order status
+                    await Future.wait([
+                        clothesDoc.reference.update({
+                            'orderStatus': 'completed',
+                            'pickedUpAt': FieldValue.serverTimestamp(),
+                        }),
+                        orderDoc.reference.update({
+                            'status': 'completed',
+                            'pickedUpAt': FieldValue.serverTimestamp(),
+                        })
+                    ]);
+
+                    if (context.mounted) {
+                        Navigator.pop(context); // Close scanner
+                        _showSuccessDialog(context); // Show success animation
+                    }
+                    break; // Exit loop after successful match
+                }
+            }
+        }
+
+        if (!qrCodeMatched) {
+            if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Invalid QR code'), backgroundColor: Colors.red),
+                );
+            }
+        }
     } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+        print('Error during verification: $e');
+        if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+            );
+        }
     }
+}
+
+
+
+  void _showSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Lottie.asset(
+              'lib/assets/successfully.json',
+              width: 130,
+              height: 130,
+              repeat: false,
+            ),
+            const Text('Pickup verified successfully!'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildStatusChip(String status) {
@@ -260,10 +338,24 @@ class MyOrdersPage extends StatelessWidget {
         ? Colors.yellow
         : status == 'approved'
             ? Colors.green
-            : Colors.grey;
-    return Chip(
-      label: Text(status.toUpperCase()),
-      backgroundColor: color,
+            : status == 'rejected'
+                ? Colors.red
+                : Colors.grey;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 12,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -271,17 +363,28 @@ class MyOrdersPage extends StatelessWidget {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _openGoogleMaps(Map<String, dynamic> location) async {
+  void _openGoogleMaps(Map<String, dynamic>? location) async {
     if (location == null) return;
-    
     final lat = location['latitude'];
     final lng = location['longitude'];
     final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
-    
     if (await canLaunch(url)) {
       await launch(url);
     } else {
       print('Could not launch $url');
     }
+  }
+
+  void _rescheduleOrder(BuildContext context, String orderId, Map<String, dynamic> orderData) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CheckoutPage(
+          selectedClothesIds: List<String>.from(orderData['clothesIds'] ?? []),
+          isRescheduling: true,
+          originalOrderData: orderData,
+        ),
+      ),
+    );
   }
 }

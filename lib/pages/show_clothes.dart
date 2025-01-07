@@ -5,7 +5,7 @@ import '../services/search_service.dart';
 import '../services/save_clothes_service.dart';
 import '../widgets/drawer.dart';
 import '../widgets/filter.dart';
-import 'package:untitled3/pages/clothes_details_page.dart'; // Import the details page
+import 'package:untitled3/pages/clothes_details_page.dart'; 
 
 class DisplayClothesPage extends StatefulWidget {
   @override
@@ -37,6 +37,22 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
           category == _selectedCategory!.toLowerCase();
 
       return matchesSearch && matchesCategory;
+    }).toList();
+  }
+
+  // Method to filter clothes based on search
+  List<QueryDocumentSnapshot> _filterClothes(List<QueryDocumentSnapshot> clothes) {
+    if (_searchQuery.isEmpty) return clothes;
+    
+    return clothes.where((doc) {
+      final description = doc['description'].toString().toLowerCase();
+      final title = doc['title'].toString().toLowerCase();
+      final category = doc['category'].toString().toLowerCase();
+      final searchLower = _searchQuery.toLowerCase();
+      
+      return description.contains(searchLower) ||
+             title.contains(searchLower) ||
+             category.contains(searchLower);
     }).toList();
   }
 
@@ -102,7 +118,7 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                               child: Center(
                                 child: Icon(
                                   Icons.error_outline,
-                                  color: const Color(0xFFC8DFC3),
+                                  color: const Color.fromARGB(255, 144, 189, 134),
                                   size: 40,
                                 ),
                               ),
@@ -181,6 +197,34 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                       ),
                     ),
                   ),
+                  if (data['condition'] != null)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(width: 4),
+                            Text(
+                              data['condition'],
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -228,7 +272,7 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Item saved successfully!'),
-          backgroundColor: Color(0xFFC8DFC3),
+          backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
@@ -242,20 +286,22 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFC8DFC3),
+      backgroundColor: const Color.fromARGB(255, 144, 189, 134),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFC8DFC3),
+        backgroundColor: const Color.fromARGB(255, 144, 189, 134),
         centerTitle: true,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.black),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(160),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            color: const Color(0xFFC8DFC3),
+            color: const Color.fromARGB(255, 144, 189, 134),
             child: Column(
               children: [
                 const SizedBox(height: 12),
@@ -273,7 +319,7 @@ class _DisplayClothesPageState extends State<DisplayClothesPage> {
                 Text(
                   "Sustainable Clothing Exchange Platform and Donation System",
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: Colors.white,
                     fontSize: 14,
                     height: 1.2,
                     fontFamily: 'Cardo',

@@ -3,22 +3,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart'; // Add this package to pubspec.yaml
 import '../widgets/drawer.dart';
-import '../services/reward_points_service.dart';
 
 class ManageDonationsPage extends StatelessWidget {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final RewardPointsService _rewardPointsService = RewardPointsService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: DrawerMenu(),
       appBar: AppBar(
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: Color.fromARGB(255, 144, 189, 134),
         centerTitle: false,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
           "Manage Donations",
           style: TextStyle(
@@ -43,7 +41,8 @@ class ManageDonationsPage extends StatelessWidget {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade700),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.green.shade700),
                 ),
               );
             }
@@ -99,7 +98,9 @@ class ManageDonationsPage extends StatelessWidget {
                           top: Radius.circular(15),
                         ),
                         child: Image.network(
-                          clothesData['imageUrl'] ?? '',
+                          clothesData['imageUrls']?.first ??
+                              clothesData['imageUrl'] ??
+                              'https://via.placeholder.com/400?text=No+Image',
                           height: 200,
                           fit: BoxFit.cover,
                           loadingBuilder: (context, child, loadingProgress) {
@@ -138,27 +139,44 @@ class ManageDonationsPage extends StatelessWidget {
                                 fontSize: 14,
                               ),
                             ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Pickup Date: ${_formatDate(clothesData['pickupDate'] != null ? (clothesData['pickupDate'] as Timestamp).toDate() : DateTime.now())}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
                             const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () => _approveOrder(
-                                context,
-                                clothesData['orderId']?.toString() ?? '',
-                                clothesDoc.id,
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green.shade700,
-                                padding: const EdgeInsets.symmetric(vertical: 15),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () => _approveOrder(
+                                    context,
+                                    clothesData['orderId']?.toString() ?? '',
+                                    clothesDoc.id,
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        Color.fromARGB(255, 144, 189, 134),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Approve'),
                                 ),
-                              ),
-                              child: const Text(
-                                'Approve Donation',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () => _rejectOrder(
+                                    context,
+                                    clothesData['orderId']?.toString() ?? '',
+                                    clothesDoc.id,
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                  ),
+                                  child: const Text('Reject'),
                                 ),
-                              ),
+                              ],
                             ),
                           ],
                         ),
@@ -174,25 +192,28 @@ class ManageDonationsPage extends StatelessWidget {
     );
   }
 
-  void _approveOrder(BuildContext context, String orderId, String clothesId) async {
+  void _approveOrder(
+      BuildContext context, String orderId, String clothesId) async {
     try {
-      final String finalOrderId = orderId.isEmpty ? 
-          FirebaseFirestore.instance.collection('orders').doc().id : 
-          orderId;
+      final String finalOrderId = orderId.isEmpty
+          ? FirebaseFirestore.instance.collection('orders').doc().id
+          : orderId;
 
-      final qrData = 'ORDER:$finalOrderId:${DateTime.now().millisecondsSinceEpoch}';
+      // Generate unique QR code for this item
+      final qrCode = 'ITEM:$clothesId:${DateTime.now().millisecondsSinceEpoch}';
+      print('Generated QR code: $qrCode'); // Debug print
 
-      // Update order status and save QR code
+      // Update order status to 'approved'
       await _firestore.collection('orders').doc(finalOrderId).set({
         'status': 'approved',
-        'qrCode': qrData,
         'completedAt': FieldValue.serverTimestamp(),
         'pointsAwarded': false,
       }, SetOptions(merge: true));
 
-      // Update clothes status
+      // Update clothes status to 'approved' and store the QR code
       await _firestore.collection('clothes').doc(clothesId).update({
         'orderStatus': 'approved',
+        'qrCode': qrCode, // Store QR code for the item
         'completedAt': FieldValue.serverTimestamp(),
       });
 
@@ -211,7 +232,7 @@ class ManageDonationsPage extends StatelessWidget {
               const Text('Recipient will scan this QR code during pickup:'),
               const SizedBox(height: 20),
               QrImageView(
-                data: qrData,
+                data: qrCode,
                 size: 200,
                 version: QrVersions.auto,
                 errorCorrectionLevel: QrErrorCorrectLevel.H,
@@ -228,7 +249,7 @@ class ManageDonationsPage extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -237,4 +258,60 @@ class ManageDonationsPage extends StatelessWidget {
       );
     }
   }
-} 
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _rejectOrder(
+      BuildContext context, String orderId, String clothesId) async {
+    try {
+      final batch = _firestore.batch();
+
+      // Update order status to rejected
+      if (orderId.isNotEmpty) {
+        final orderRef = _firestore.collection('orders').doc(orderId);
+        batch.update(orderRef, {
+          'status': 'rejected',
+          'rejectedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Update clothes status to rejected
+      final clothesRef = _firestore.collection('clothes').doc(clothesId);
+      batch.update(clothesRef, {
+        'orderStatus': 'rejected',
+        'rejectedAt': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      if (!context.mounted) return;
+
+      // Show success dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Order Rejected'),
+          content: const Text(
+            'The order has been rejected. The user will be notified and can reschedule the pickup.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error rejecting order: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}

@@ -189,4 +189,11 @@ class FirestoreServices {
       await commentDoc.docs.first.reference.delete();
     }
   }
+
+  Future<void> updatePost(String postId, String newMessage) async {
+    await posts.doc(postId).update({
+      'message': newMessage,
+      'timestamp': Timestamp.now(), // Optionally update the timestamp
+    });
+  }
 }

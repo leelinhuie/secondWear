@@ -43,7 +43,7 @@ class _SavedClothesPageState extends State<SavedClothesPage> {
           fontSize: 20,
           fontFamily: 'Cardo',
         ),
-        backgroundColor: const Color(0xFFC8DFC3),
+        backgroundColor: const Color.fromARGB(255, 144, 189, 134),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SafeArea(
@@ -228,7 +228,7 @@ class _SavedClothesPageState extends State<SavedClothesPage> {
                 child: ElevatedButton(
                   onPressed: _navigateToCheckout,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFBDC29A),
+                    backgroundColor: const Color.fromARGB(255, 144, 189, 134),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -244,7 +244,7 @@ class _SavedClothesPageState extends State<SavedClothesPage> {
                         style: const TextStyle(
                           color: Colors.black,
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cardo',
                         ),
                       ),
                     ],

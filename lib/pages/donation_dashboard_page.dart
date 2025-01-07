@@ -21,7 +21,7 @@ class DonationDashboardPage extends StatelessWidget {
           fontSize: 20,
           fontFamily: 'Cardo',
         ),
-        backgroundColor: const Color(0xFFC8DFC3),
+        backgroundColor: Color.fromARGB(255, 144, 189, 134),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: StreamBuilder<QuerySnapshot>(

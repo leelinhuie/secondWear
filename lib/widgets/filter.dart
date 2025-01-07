@@ -4,17 +4,18 @@ class FilterWidget extends StatelessWidget {
   final String? selectedCategory;
   final Function(String?) onCategoryChanged;
   final List<String> categories;
-  
+
   const FilterWidget({
     Key? key,
     required this.selectedCategory,
     required this.onCategoryChanged,
     this.categories = const [
-      'All',
+      'None',
       'Shirts',
       'Pants',
       'Jackets',
-      'Shoes',
+      'Skirt',
+      'Dress',
       'Accessories'
     ],
   }) : super(key: key);
@@ -74,7 +75,8 @@ class FilterWidget extends StatelessWidget {
                   color: isSelected ? Colors.green.shade700 : Colors.black87,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               );
             }).toList(),
           ),

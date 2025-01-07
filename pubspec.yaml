@@ -55,6 +55,9 @@ dependencies:
   geocoding: ^2.1.1
   url_launcher: ^6.2.5
   lottie: ^2.7.0
+  carousel_slider: ^5.0.0
+  haptic_feedback: ^0.5.1+1
+
 
 
 dev_dependencies:
@@ -81,6 +84,7 @@ flutter:
   assets:
     - lib/assets/loading.json
     - lib/assets/checkout.json
+    - lib/assets/successfully.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -111,6 +115,16 @@ flutter:
     - family: OldStandardTT
       fonts:
         - asset: fonts/OldStandardTT-Regular.ttf
+    - family: Poppins
+      fonts:
+        - asset: fonts/Poppins-Light.ttf
+    - family: Brawler
+      fonts:
+        - asset: fonts/Brawler-Regular.ttf
+    - family: Quicksand
+      fonts:
+        - asset: fonts/Quicksand-Regular.ttf
+    
   #         style: italic
   #   - family: Trajan Pro
   #     fonts:
