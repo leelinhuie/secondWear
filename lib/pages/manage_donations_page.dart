@@ -195,25 +195,28 @@ class ManageDonationsPage extends StatelessWidget {
   void _approveOrder(
       BuildContext context, String orderId, String clothesId) async {
     try {
+      // Generate a new order ID if one doesn't exist
       final String finalOrderId = orderId.isEmpty
-          ? FirebaseFirestore.instance.collection('orders').doc().id
+          ? _firestore.collection('orders').doc().id
           : orderId;
 
-      // Generate unique QR code for this item
-      final qrCode = 'ITEM:$clothesId:${DateTime.now().millisecondsSinceEpoch}';
-      print('Generated QR code: $qrCode'); // Debug print
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      // Generate QR code in ORDER format: ORDER:timestamp:userId:orderId
+      final qrData = 'ORDER:$timestamp:${_auth.currentUser!.uid}:$finalOrderId';
 
-      // Update order status to 'approved'
+      // Update order status
       await _firestore.collection('orders').doc(finalOrderId).set({
         'status': 'approved',
         'completedAt': FieldValue.serverTimestamp(),
         'pointsAwarded': false,
+        'clothesIds': [clothesId],
+        'qrCode': qrData,
       }, SetOptions(merge: true));
 
-      // Update clothes status to 'approved' and store the QR code
+      // Update clothes document
       await _firestore.collection('clothes').doc(clothesId).update({
         'orderStatus': 'approved',
-        'qrCode': qrCode, // Store QR code for the item
+        'orderId': finalOrderId,
         'completedAt': FieldValue.serverTimestamp(),
       });
 
@@ -229,10 +232,8 @@ class ManageDonationsPage extends StatelessWidget {
             children: [
               const Text('QR code generated successfully'),
               const SizedBox(height: 20),
-              const Text('Recipient will scan this QR code during pickup:'),
-              const SizedBox(height: 20),
               QrImageView(
-                data: qrCode,
+                data: qrData,
                 size: 200,
                 version: QrVersions.auto,
                 errorCorrectionLevel: QrErrorCorrectLevel.H,
@@ -249,7 +250,6 @@ class ManageDonationsPage extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
