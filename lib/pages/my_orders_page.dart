@@ -254,9 +254,11 @@ class MyOrdersPage extends StatelessWidget {
       final scannedOrderId = parts[3];
 
       // Verify that the scanned order ID matches
-      if (scannedOrderId != orderId) {
+        if (scannedOrderId != orderId) {
+        await Haptics.vibrate(HapticsType.error); // Better error feedback
         throw 'QR code does not match this order';
       }
+
 
       // Fetch order document
       final orderDoc = await _firestore.collection('orders').doc(orderId).get();
